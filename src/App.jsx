@@ -1,11 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navigation from './components/Navigation/Navigation';
-import Dashboard from './components/Dashboard/Dashboard';
-import UserProfile from './components/Profile/UserProfile';
-import WorkoutDiary from './components/WorkoutDiary/WorkoutDiary';
-import Login from './components/Auth/Login';
-import { useAuth } from './hooks/useAuth';
+import Navigation from '@components/Navigation/Navigation';
+import Dashboard from '@components/Dashboard/Dashboard';
+import UserProfile from '@components/Profile/UserProfile';
+import WorkoutDiary from '@components/WorkoutDiary/WorkoutDiary';
+import Login from '@components/Auth/Login';
+import { useAuth } from '@hooks/useAuth';
 import './App.css';
 
 // Protected Route component
