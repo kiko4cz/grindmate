@@ -87,6 +87,69 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const resetPassword = async (email) => {
+    try {
+      // Get the current environment
+      const isProduction = import.meta.env.PROD;
+      const baseUrl = isProduction 
+        ? 'https://grindmate.onrender.com'  // Production URL
+        : window.location.origin;           // Development URL (localhost)
+      
+      const redirectTo = `${baseUrl}/reset-password`;
+      
+      console.log('Reset password attempt:', {
+        email,
+        redirectTo,
+        environment: isProduction ? 'production' : 'development',
+        baseUrl
+      });
+      
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      });
+      
+      if (error) {
+        console.error('Reset password error details:', {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+          details: error.details,
+          redirectTo
+        });
+
+        // Handle rate limit error specifically
+        if (error.status === 429) {
+          const waitTime = 60; // Default wait time in seconds
+          const errorMessage = `Příliš mnoho pokusů o reset hesla. Prosím, počkejte ${waitTime} sekund a zkuste to znovu.`;
+          return { 
+            error: new Error(errorMessage),
+            rateLimited: true,
+            waitTime
+          };
+        }
+        
+        throw error;
+      }
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return { error };
+    }
+  };
+
+  const updatePassword = async (newPassword) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -94,7 +157,9 @@ export function AuthProvider({ children }) {
     signIn,
     signUp,
     signOut,
-    refreshSession
+    refreshSession,
+    resetPassword,
+    updatePassword
   };
 
   return (
