@@ -25,5 +25,10 @@ export default defineConfig({
   },
   server: {
     port: 5174
+  },
+  preview: {
+    host: true,
+    port: process.env.PORT || 5174,
+    allowedHosts: ['grindmate.onrender.com']
   }
 })
