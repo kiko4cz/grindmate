@@ -7,6 +7,7 @@ import UserProfile from '@components/Profile/UserProfile';
 import WorkoutDiary from '@components/WorkoutDiary/WorkoutDiary';
 import Login from '@pages/Login';
 import Register from '@pages/Register';
+import ResetPassword from '@pages/ResetPassword';
 import SubscriptionsPage from '@pages/SubscriptionsPage';
 import Matches from '@components/Matches/Matches';
 import AuthCallback from '@pages/AuthCallback';
@@ -21,6 +22,7 @@ function AppContent() {
   const isAuthPage = location.pathname === '/' ||
     location.pathname === '/login' ||
     location.pathname === '/register' ||
+    location.pathname === '/reset-password' ||
     location.pathname === '/auth/callback';
 
   return (
@@ -31,6 +33,7 @@ function AppContent() {
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route
             path="/dashboard"

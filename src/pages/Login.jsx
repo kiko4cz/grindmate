@@ -116,6 +116,11 @@ function Login() {
                 required
                 placeholder="Zadejte své heslo"
               />
+              <div className="form-actions">
+                <Link to="/reset-password" className="forgot-password">
+                  Zapomenuté heslo?
+                </Link>
+              </div>
             </div>
 
             <button
