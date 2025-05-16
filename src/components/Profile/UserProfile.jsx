@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../hooks/useAuth';
+import { supabase } from '@lib/supabase';
+import { useAuth } from '@contexts/AuthContext';
 
 function UserProfile() {
   const { user } = useAuth();
@@ -97,8 +97,8 @@ function UserProfile() {
 
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ photo_url: publicUrl })
-          .eq('user_id', user.id);
+          .update({ avatar_url: publicUrl })
+          .eq('id', user.id);
 
         if (updateError) {
           throw new Error(`Nepodařilo se aktualizovat profil: ${updateError.message}`);
@@ -114,71 +114,20 @@ function UserProfile() {
     }
   }
 
-  async function fetchProfile() {
+  const fetchProfile = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log('Načítání profilu pro uživatele:', user.id);
-
-      // First, try to fetch the existing profile
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
-      console.log('Výsledek načtení profilu:', { data, error: fetchError });
+      if (error) throw error;
 
-      if (fetchError) {
-        console.error('Chyba při načítání profilu:', fetchError);
-        
-        // If profile doesn't exist, create a new one
-        if (fetchError.code === 'PGRST116') {
-          console.log('Profil nenalezen, vytvářím nový profil');
-          
-          const newProfile = {
-            user_id: user.id,
-            username: user.email?.split('@')[0] || '',
-            full_name: '',
-            bio: '',
-            photo_url: null,
-            height: null,
-            weight: null,
-            fitness_level: 'beginner',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-
-          console.log('Vytvářím nový profil:', newProfile);
-
-          const { data: createdProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert([newProfile])
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('Chyba při vytváření profilu:', createError);
-            throw new Error(`Nepodařilo se vytvořit profil: ${createError.message}`);
-          }
-
-          console.log('Profil úspěšně vytvořen:', createdProfile);
-          setProfile(createdProfile);
-          setFormData({
-            username: createdProfile.username || '',
-            full_name: createdProfile.full_name || '',
-            bio: createdProfile.bio || '',
-            height: createdProfile.height || '',
-            weight: createdProfile.weight || '',
-            fitness_level: createdProfile.fitness_level || 'beginner'
-          });
-          setEditing(true); // Automatically enter edit mode for new profiles
-        } else {
-          throw new Error(`Nepodařilo se načíst profil: ${fetchError.message}`);
-        }
-      } else {
-        console.log('Profil nalezen:', data);
+      if (data) {
         setProfile(data);
         setFormData({
           username: data.username || '',
@@ -190,12 +139,12 @@ function UserProfile() {
         });
       }
     } catch (err) {
-      console.error('Chyba profilu:', err);
-      setError(err.message);
+      console.error('Error fetching profile:', err);
+      setError('Nepodařilo se načíst profil');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -214,7 +163,7 @@ function UserProfile() {
           fitness_level: formData.fitness_level,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user.id);
+        .eq('id', user.id);
 
       if (error) {
         console.error('Chyba při aktualizaci profilu:', error);
@@ -261,18 +210,20 @@ function UserProfile() {
 
   return (
     <div className="container">
-      <h1>Profil uživatele</h1>
-
       <div className="card">
         {!editing ? (
           <>
             <div className="profile-header">
               <div className="profile-photo">
-                {profile?.photo_url ? (
+                {profile?.avatar_url ? (
                   <img 
-                    src={profile.photo_url} 
+                    src={profile.avatar_url} 
                     alt="Profilový obrázek" 
                     className="profile-image"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/default-avatar.png';
+                    }}
                   />
                 ) : (
                   <div className="profile-image-placeholder">
@@ -312,11 +263,15 @@ function UserProfile() {
           <form onSubmit={handleSubmit} className="profile-edit-form">
             <div className="profile-photo-upload">
               <div className="current-photo">
-                {profile?.photo_url ? (
+                {profile?.avatar_url ? (
                   <img 
-                    src={profile.photo_url} 
+                    src={profile.avatar_url} 
                     alt="Profilový obrázek" 
                     className="profile-image"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/default-avatar.png';
+                    }}
                   />
                 ) : (
                   <div className="profile-image-placeholder">

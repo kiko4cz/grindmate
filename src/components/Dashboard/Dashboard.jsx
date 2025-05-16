@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '@contexts/AuthContext';
+import { useWorkouts } from '@hooks/useWorkouts';
+import GoalForm from '../Goals/GoalForm';
+import WorkoutForm from '../Workouts/WorkoutForm';
+import MotivationQuote from '../Motivation/MotivationQuote';
 
 function Dashboard() {
   const { user } = useAuth();
@@ -8,6 +12,8 @@ function Dashboard() {
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showGoalForm, setShowGoalForm] = useState(false);
+  const [showWorkoutForm, setShowWorkoutForm] = useState(false);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -15,9 +21,6 @@ function Dashboard() {
         setLoading(true);
         setError(null);
 
-        // Debug: Check if user is authenticated
-        console.log('Current user:', user);
-        
         if (!user) {
           throw new Error('Uživatel není přihlášen');
         }
@@ -34,7 +37,6 @@ function Dashboard() {
           throw new Error('Nepodařilo se načíst cíle');
         }
         
-        console.log('Goals data:', goalsData);
         setGoals(goalsData || []);
 
         // Fetch recent workouts
@@ -42,16 +44,16 @@ function Dashboard() {
           .from('workouts')
           .select('*')
           .eq('user_id', user.id)
-          .order('date', { ascending: false })
+          .order('date', { ascending: true })
           .limit(3);
 
         if (workoutsError) {
           console.error('Workouts error:', workoutsError);
-          throw new Error('Nepodařilo se načíst tréninky');
+          // Don't throw error for workouts, just show empty state
+          setWorkouts([]);
+        } else {
+          setWorkouts(workoutsData || []);
         }
-        
-        console.log('Workouts data:', workoutsData);
-        setWorkouts(workoutsData || []);
 
       } catch (err) {
         console.error('Dashboard error:', err);
@@ -68,6 +70,16 @@ function Dashboard() {
       setError('Uživatel není přihlášen');
     }
   }, [user]);
+
+  const handleGoalCreated = (newGoal) => {
+    setGoals(prev => [newGoal, ...prev]);
+    setShowGoalForm(false);
+  };
+
+  const handleWorkoutCreated = (newWorkout) => {
+    setWorkouts(prev => [newWorkout, ...prev]);
+    setShowWorkoutForm(false);
+  };
 
   if (loading) {
     return (
@@ -92,77 +104,146 @@ function Dashboard() {
   }
 
   return (
-    <div className="container">
-      <h1>Vítejte v GrindMate</h1>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h1>Vítejte v GrindMate</h1>
+        <p className="dashboard-subtitle">Sledujte svůj pokrok a dosáhněte svých cílů</p>
+      </div>
       
       <div className="dashboard-grid">
         {/* Goals Section */}
-        <div className="card">
-          <h2>Moje cíle</h2>
-          {goals.length === 0 ? (
-            <p>Zatím nemáte žádné cíle. Vytvořte si nový cíl pro sledování vašeho pokroku.</p>
-          ) : (
-            <div className="goals-list">
-              {goals.map((goal) => (
-                <div key={goal.id} className="goal-item">
-                  <h3>{goal.title}</h3>
-                  <p>{goal.description}</p>
-                  <div className="progress-bar">
-                    <div 
-                      className="progress-fill" 
-                      style={{ width: `${(goal.current_value / goal.target_value) * 100}%` }}
-                    />
+        <div className={`card goals-card ${showGoalForm ? 'expanded' : ''}`}>
+          <div className="card-header">
+            <h2>Moje cíle</h2>
+            <button 
+              className="btn-primary"
+              onClick={() => setShowGoalForm(true)}
+            >
+              Nový cíl
+            </button>
+          </div>
+
+          <div className="card-content">
+            {showGoalForm ? (
+              <div className="goal-form-wrapper">
+                <GoalForm 
+                  onGoalCreated={handleGoalCreated}
+                  onCancel={() => setShowGoalForm(false)}
+                />
+              </div>
+            ) : (
+              <>
+                {goals.length === 0 ? (
+                  <div className="empty-state">
+                    <p>Zatím nemáte žádné cíle. Vytvořte si nový cíl pro sledování vašeho pokroku.</p>
+                    <button 
+                      className="btn-secondary"
+                      onClick={() => setShowGoalForm(true)}
+                    >
+                      Vytvořit první cíl
+                    </button>
                   </div>
-                  <p className="text-sm">
-                    {goal.current_value} / {goal.target_value} {goal.unit}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+                ) : (
+                  <div className="goals-list">
+                    {goals.map((goal) => (
+                      <div key={goal.id} className="goal-item">
+                        <h3>{goal.title}</h3>
+                        <p>{goal.description}</p>
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill" 
+                            style={{ width: `${(goal.current_value / goal.target_value) * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-sm">
+                          {goal.current_value} / {goal.target_value} {goal.unit}
+                        </p>
+                        {goal.target_date && (
+                          <p className="text-sm text-gray-500">
+                            Cíl do: {new Date(goal.target_date).toLocaleDateString('cs-CZ')}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Recent Workouts Section */}
-        <div className="card">
-          <h2>Nadcházející tréninky</h2>
-          {workouts.length === 0 ? (
-            <p>Zatím nemáte žádné tréninky. Přidejte si nový trénink pro sledování vašeho pokroku.</p>
-          ) : (
-            <div className="workouts-list">
-              {workouts.map(workout => (
-                <div key={workout.id} className="workout-item">
-                  <h3>{workout.title}</h3>
-                  <p>{workout.description}</p>
-                  <p>Délka: {workout.duration} minut</p>
-                  <p>Datum: {new Date(workout.date).toLocaleDateString('cs-CZ')}</p>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className={`card workouts-card ${showWorkoutForm ? 'expanded' : ''}`}>
+          <div className="card-header">
+            <h2>Nadcházející tréninky</h2>
+            <button 
+              className="btn-primary"
+              onClick={() => setShowWorkoutForm(true)}
+            >
+              Nový trénink
+            </button>
+          </div>
+          <div className="card-content">
+            {showWorkoutForm ? (
+              <div className="workout-form-wrapper">
+                <WorkoutForm 
+                  onWorkoutCreated={handleWorkoutCreated}
+                  onCancel={() => setShowWorkoutForm(false)}
+                />
+              </div>
+            ) : (
+              <>
+                {workouts.length === 0 ? (
+                  <div className="empty-state">
+                    <p>Zatím nemáte žádné tréninky. Přidejte si nový trénink pro sledování vašeho pokroku.</p>
+                    <button 
+                      className="btn-secondary"
+                      onClick={() => setShowWorkoutForm(true)}
+                    >
+                      Naplánovat trénink
+                    </button>
+                  </div>
+                ) : (
+                  <div className="workouts-list">
+                    {workouts.map(workout => (
+                      <div key={workout.id} className="workout-item">
+                        <h3>{workout.title}</h3>
+                        <p>{workout.description}</p>
+                        <div className="workout-details">
+                          <span className="workout-type">{workout.type}</span>
+                          <span className="workout-duration">{workout.duration} min</span>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {new Date(workout.date).toLocaleDateString('cs-CZ')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         {/* Quick Stats Section */}
-        <div className="card">
+        <div className="card stats-card">
           <h2>Rychlé statistiky</h2>
-          <div className="stats-grid">
-            <div className="stat-item">
-              <h3>Celkem tréninků</h3>
-              <p>{workouts.length}</p>
-            </div>
-            <div className="stat-item">
-              <h3>Aktivní cíle</h3>
-              <p>{goals.length}</p>
+          <div className="card-content">
+            <div className="stats-grid">
+              <div className="stat-item">
+                <h3>Celkem tréninků</h3>
+                <p>{workouts.length}</p>
+              </div>
+              <div className="stat-item">
+                <h3>Aktivní cíle</h3>
+                <p>{goals.length}</p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Motivation Section */}
-        <div className="motivation-card">
-          <h2>Motivace</h2>
-          <p className="motivation-text">
-            "Každý den je nová příležitost být lepší verzí sebe sama."
-          </p>
-        </div>
+        <MotivationQuote />
       </div>
     </div>
   );

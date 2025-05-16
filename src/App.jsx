@@ -1,59 +1,108 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navigation from '@components/Navigation/Navigation';
+import Footer from '@components/Footer/Footer';
 import Dashboard from '@components/Dashboard/Dashboard';
 import UserProfile from '@components/Profile/UserProfile';
 import WorkoutDiary from '@components/WorkoutDiary/WorkoutDiary';
-import Login from '@components/Auth/Login';
-import { useAuth } from '@hooks/useAuth';
-import './App.css';
+import Login from '@pages/Login';
+import Register from '@pages/Register';
+import SubscriptionsPage from '@pages/SubscriptionsPage';
+import Matches from '@components/Matches/Matches';
+import AuthCallback from '@pages/AuthCallback';
+import PrivateRoute from '@components/Auth/PrivateRoute';
+import Map from './components/Map/Map';
+import Settings from './pages/Settings';
+import { AuthProvider } from './contexts/AuthContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 
-// Protected Route component
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
+function AppContent() {
+  const location = useLocation();
+  const isAuthPage = location.pathname === '/' ||
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
+    location.pathname === '/auth/callback';
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  return children;
+  return (
+    <div className="app">
+      {!isAuthPage && <Navigation />}
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <PrivateRoute>
+                <UserProfile />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/diary"
+            element={
+              <PrivateRoute>
+                <WorkoutDiary />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/subscriptions"
+            element={
+              <PrivateRoute>
+                <SubscriptionsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/matches"
+            element={
+              <PrivateRoute>
+                <Matches />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/map"
+            element={
+              <PrivateRoute>
+                <Map />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <PrivateRoute>
+                <Settings />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </main>
+      {!isAuthPage && <Footer />}
+    </div>
+  );
 }
 
 function App() {
-  const { user } = useAuth();
-
   return (
     <Router>
-      <div className="app">
-        {user && <Navigation />}
-        <main className="main-content">
-          <Routes>
-            <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-            
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <UserProfile />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/diary" element={
-              <ProtectedRoute>
-                <WorkoutDiary />
-              </ProtectedRoute>
-            } />
-          </Routes>
-        </main>
-      </div>
+      <AuthProvider>
+        <SettingsProvider>
+          <AppContent />
+        </SettingsProvider>
+      </AuthProvider>
     </Router>
   );
 }
